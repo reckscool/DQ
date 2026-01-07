@@ -1,38 +1,135 @@
-
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "type": "array",
-  "items": {
-    "type": "object",
-    "required": ["id", "datasource", "entity", "checks"],
-    "properties": {
-      "id": { "type": "string" },
-      "datasource": { "type": "string" },
-      "entity": {
+  "title": "SQL Data Quality Configuration Schema",
+  "type": "object",
+  "required": ["datasources", "rulesets"],
+  "properties": {
+
+    "datasources": {
+      "type": "object",
+      "additionalProperties": {
         "type": "object",
-        "required": ["type"],
+        "required": ["type", "jdbcUrl"],
         "properties": {
-          "type": { "enum": ["table", "query"] },
-          "name": { "type": "string" },
-          "sql": { "type": "string" }
+          "type": {
+            "type": "string",
+            "enum": ["postgres", "mysql", "oracle", "sqlserver", "h2"]
+          },
+          "jdbcUrl": { "type": "string" },
+          "username": { "type": "string" },
+          "password": { "type": "string" }
         }
-      },
-      "checks": {
-        "type": "array",
-        "items": {
-          "type": "object",
-          "required": ["id", "type", "severity"],
-          "properties": {
-            "id": { "type": "string" },
-            "type": {
-              "enum": ["not_null", "range", "uniqueness", "row_count", "custom_sql"]
-            },
-            "column": { "type": "string" },
-            "severity": {
-              "enum": ["LOW", "MEDIUM", "HIGH", "CRITICAL"]
-            },
-            "params": { "type": "object" }
+      }
+    },
+
+    "lookups": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["source"],
+        "properties": {
+          "source": {
+            "type": "string",
+            "enum": ["static", "table", "query"]
+          },
+          "values": {
+            "type": "array",
+            "items": { "type": ["string", "number"] }
+          },
+          "table": { "type": "string" },
+          "column": { "type": "string" },
+          "query": { "type": "string" }
+        }
+      }
+    },
+
+    "rulesets": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "datasource", "entity", "checks"],
+        "properties": {
+
+          "id": { "type": "string" },
+
+          "datasource": { "type": "string" },
+
+          "entity": {
+            "type": "object",
+            "required": ["type"],
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": ["table", "query"]
+              },
+              "name": { "type": "string" },
+              "sql": { "type": "string" }
+            }
+          },
+
+          "schedule": {
+            "type": "object",
+            "properties": {
+              "cron": { "type": "string" },
+              "intervalMinutes": { "type": "integer" }
+            }
+          },
+
+          "checks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/definitions/check"
+            }
           }
+        }
+      }
+    }
+  },
+
+  "definitions": {
+
+    "check": {
+      "type": "object",
+      "required": ["id", "type", "severity"],
+      "properties": {
+
+        "id": { "type": "string" },
+
+        "type": {
+          "type": "string",
+          "enum": [
+            "not_null",
+            "range",
+            "length",
+            "regex",
+            "uniqueness",
+            "lookup",
+            "row_count",
+            "referential_integrity",
+            "freshness",
+            "statistical",
+            "custom_sql"
+          ]
+        },
+
+        "column": { "type": "string" },
+
+        "severity": {
+          "type": "string",
+          "enum": ["LOW", "MEDIUM", "HIGH", "CRITICAL"]
+        },
+
+        "threshold": {
+          "type": "object",
+          "properties": {
+            "failPercent": { "type": "number" },
+            "failCount": { "type": "integer" }
+          }
+        },
+
+        "params": {
+          "type": "object",
+          "additionalProperties": true
         }
       }
     }
