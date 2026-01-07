@@ -1,0 +1,1 @@
+package com.example.dq.model; import java.util.Map; public class Check { public String id; public String type; public String column; public String severity; public Map<String,Object> params; }

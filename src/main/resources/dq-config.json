@@ -1,0 +1,11 @@
+
+[
+  {
+    "id": "demo_rules",
+    "datasource": "default",
+    "entity": { "type": "table", "name": "TEST_DATA" },
+    "checks": [
+      { "id": "c1", "type": "not_null", "column": "ID", "severity": "HIGH" }
+    ]
+  }
+]

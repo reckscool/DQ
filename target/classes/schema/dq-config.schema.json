@@ -1,0 +1,40 @@
+
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "required": ["id", "datasource", "entity", "checks"],
+    "properties": {
+      "id": { "type": "string" },
+      "datasource": { "type": "string" },
+      "entity": {
+        "type": "object",
+        "required": ["type"],
+        "properties": {
+          "type": { "enum": ["table", "query"] },
+          "name": { "type": "string" },
+          "sql": { "type": "string" }
+        }
+      },
+      "checks": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "required": ["id", "type", "severity"],
+          "properties": {
+            "id": { "type": "string" },
+            "type": {
+              "enum": ["not_null", "range", "uniqueness", "row_count", "custom_sql"]
+            },
+            "column": { "type": "string" },
+            "severity": {
+              "enum": ["LOW", "MEDIUM", "HIGH", "CRITICAL"]
+            },
+            "params": { "type": "object" }
+          }
+        }
+      }
+    }
+  }
+}

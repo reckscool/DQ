@@ -1,0 +1,1 @@
+package com.example.dq.model; import java.util.List; public class RuleSet { public String id; public String datasource; public Entity entity; public List<Check> checks; public static class Entity { public String type; public String name; public String sql; }}
