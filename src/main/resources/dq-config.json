@@ -1,11 +1,197 @@
+{
+  "application": {
+    "name": "sql-data-quality-engine",
+    "version": "1.0"
+  },
 
-[
-  {
-    "id": "demo_rules",
-    "datasource": "default",
-    "entity": { "type": "table", "name": "TEST_DATA" },
-    "checks": [
-      { "id": "c1", "type": "not_null", "column": "ID", "severity": "HIGH" }
-    ]
-  }
-]
+  "datasources": {
+    "primaryDb": {
+      "type": "postgres",
+      "jdbcUrl": "jdbc:postgresql://localhost:5432/appdb",
+      "username": "dq_user",
+      "password": "dq_password"
+    }
+  },
+
+  "lookups": {
+    "country_codes": {
+      "source": "static",
+      "values": ["US", "CA", "IN", "GB", "AU"]
+    },
+
+    "valid_order_status": {
+      "source": "table",
+      "table": "ref_order_status",
+      "column": "status_code"
+    },
+
+    "active_customers": {
+      "source": "query",
+      "query": "SELECT id FROM customers WHERE active = true"
+    }
+  },
+
+  "rulesets": [
+    {
+      "id": "customer_table_checks",
+      "datasource": "primaryDb",
+
+      "entity": {
+        "type": "table",
+        "name": "customers"
+      },
+
+      "schedule": {
+        "cron": "0 0 * * *"
+      },
+
+      "checks": [
+        {
+          "id": "cust_id_not_null",
+          "type": "not_null",
+          "column": "id",
+          "severity": "CRITICAL",
+          "threshold": {
+            "failCount": 0
+          }
+        },
+
+        {
+          "id": "cust_email_format",
+          "type": "regex",
+          "column": "email",
+          "severity": "HIGH",
+          "params": {
+            "pattern": "^[A-Za-z0-9+_.-]+@(.+)$"
+          },
+          "threshold": {
+            "failPercent": 1
+          }
+        },
+
+        {
+          "id": "cust_age_range",
+          "type": "range",
+          "column": "age",
+          "severity": "MEDIUM",
+          "params": {
+            "min": 18,
+            "max": 100
+          }
+        },
+
+        {
+          "id": "cust_country_lookup",
+          "type": "lookup",
+          "column": "country_code",
+          "severity": "HIGH",
+          "params": {
+            "lookupRef": "country_codes"
+          }
+        },
+
+        {
+          "id": "cust_updated_freshness",
+          "type": "freshness",
+          "column": "updated_at",
+          "severity": "CRITICAL",
+          "params": {
+            "maxDelayMinutes": 1440
+          }
+        }
+      ]
+    },
+
+    {
+      "id": "orders_table_checks",
+      "datasource": "primaryDb",
+
+      "entity": {
+        "type": "table",
+        "name": "orders"
+      },
+
+      "schedule": {
+        "intervalMinutes": 60
+      },
+
+      "checks": [
+        {
+          "id": "order_id_unique",
+          "type": "uniqueness",
+          "column": "order_id",
+          "severity": "CRITICAL"
+        },
+
+        {
+          "id": "order_customer_fk",
+          "type": "referential_integrity",
+          "column": "customer_id",
+          "severity": "CRITICAL",
+          "params": {
+            "refTable": "customers",
+            "refColumn": "id"
+          }
+        },
+
+        {
+          "id": "order_status_lookup",
+          "type": "lookup",
+          "column": "status",
+          "severity": "HIGH",
+          "params": {
+            "lookupRef": "valid_order_status"
+          }
+        },
+
+        {
+          "id": "order_amount_statistical",
+          "type": "statistical",
+          "column": "amount",
+          "severity": "MEDIUM",
+          "params": {
+            "method": "stddev",
+            "windowDays": 7,
+            "maxZScore": 3
+          }
+        },
+
+        {
+          "id": "orders_rowcount_anomaly",
+          "type": "row_count",
+          "severity": "HIGH",
+          "params": {
+            "min": 100,
+            "max": 100000
+          }
+        }
+      ]
+    },
+
+    {
+      "id": "daily_failed_orders_check",
+      "datasource": "primaryDb",
+
+      "entity": {
+        "type": "query",
+        "sql": "SELECT * FROM orders WHERE created_at >= CURRENT_DATE"
+      },
+
+      "schedule": {
+        "cron": "0 */30 * * *"
+      },
+
+      "checks": [
+        {
+          "id": "failed_orders_custom_sql",
+          "type": "custom_sql",
+          "severity": "CRITICAL",
+          "params": {
+            "sql": "SELECT COUNT(*) FROM orders WHERE status = 'FAILED' AND created_at >= CURRENT_DATE",
+            "expected": 0
+          }
+        }
+      ]
+    }
+  ]
+}
